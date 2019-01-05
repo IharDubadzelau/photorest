@@ -1,12 +1,14 @@
 package snik.photorest.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
 import snik.photorest.domain.Message;
 import snik.photorest.domain.Views;
 import snik.photorest.repo.MessageRepo;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("message")
 public class MessageController {
-
     private final MessageRepo messageRepo;
 
     @Autowired
@@ -30,7 +31,7 @@ public class MessageController {
 
     @GetMapping("{id}")
     @JsonView(Views.FullMessage.class)
-    public Message getOn(@PathVariable("id") Message message) {
+    public Message getOne(@PathVariable("id") Message message) {
         return message;
     }
 
@@ -41,13 +42,23 @@ public class MessageController {
     }
 
     @PutMapping("{id}")
-    public Message update(@PathVariable("id") Message messageFromDb, @RequestBody Message message) {
+    public Message update(
+            @PathVariable("id") Message messageFromDb,
+            @RequestBody Message message
+    ) {
         BeanUtils.copyProperties(message, messageFromDb, "id");
+
         return messageRepo.save(messageFromDb);
     }
 
     @DeleteMapping("{id}")
     public void delete(@PathVariable("id") Message message) {
         messageRepo.delete(message);
+    }
+
+    @MessageMapping("/changeMessage")
+    @SendTo("/topic/activity")
+    public Message message(Message message) {
+        return messageRepo.save(message);
     }
 }
